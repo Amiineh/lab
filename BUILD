@@ -653,7 +653,7 @@ MAPS = glob(["assets/maps/src/*.map"])
 genrule(
     name = "map_assets",
     srcs = MAPS,
-    outs = ["baselab/" + f[16:-3] + "pk3" for f in MAPS],
+    outs = ["baselab/" + f[12:-3] + "pk3" for f in MAPS],
     cmd = "cp -t $(@D)/baselab $(SRCS); " +
           "for s in $(SRCS); do " +
           "  BM=$$(basename $${s}); M=$${BM/.map/}; " +
@@ -981,6 +981,20 @@ py_binary(
     srcs = ["python/random_agent.py"],
     main = "python/random_agent.py",
     deps = [":python_random_agent_lib"],
+)
+
+py_binary(
+    name = "random_extract_images_test",
+    srcs = ["python/random_extract_images_test.py"],
+    main = "python/random_extract_images_test.py",
+    deps = [":random_extract_images_test"],
+)
+
+py_binary(
+    name = "generate_rat_trajectories",
+    srcs = ["python/generate_rat_trajectories.py"],
+    main = "python/generate_rat_trajectories.py",
+    deps = [":generate_rat_trajectories"],
 )
 
 py_library(

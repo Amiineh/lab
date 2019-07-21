@@ -1,1 +1,9 @@
 /bazel-*
+
+/python/trajs
+/python/images
+/python/images_rats
+
+.DS_Store
+.idea
+python/.DS_Store

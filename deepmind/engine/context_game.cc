@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2019 Google Inc.
+// Copyright (C) 2017-2018 Google Inc.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "deepmind/lua/class.h"
@@ -37,8 +36,8 @@
 #include "deepmind/lua/table_ref.h"
 #include "deepmind/tensor/lua_tensor.h"
 #include "deepmind/tensor/tensor_view.h"
-#include "deepmind/util/default_read_only_file_system.h"
 #include "deepmind/util/files.h"
+#include "deepmind/util/default_read_only_file_system.h"
 
 namespace deepmind {
 namespace lab {
@@ -238,11 +237,15 @@ class LuaGameModule : public lua::Class<LuaGameModule> {
   lua::NResultsOr UpdateTexture(lua_State* L) {
     std::string name;
     if (!lua::Read(L, 2, &name)) {
-      return absl::StrCat("Invalid argument name: ", lua::ToString(L, 2));
+      std::string error = "Invalid argument name: ";
+      error += lua::ToString(L, 2);
+      return std::move(error);
     }
     auto* data = tensor::LuaTensor<unsigned char>::ReadObject(L, 3);
     if (data == nullptr) {
-      return absl::StrCat("Invalid argument data: ", lua::ToString(L, 3));
+      std::string error = "Invalid argument data: ";
+      error += lua::ToString(L, 3);
+      return std::move(error);
     }
     const auto& tensor_view = data->tensor_view();
     const auto& shape = tensor_view.shape();
@@ -255,8 +258,10 @@ class LuaGameModule : public lua::Class<LuaGameModule> {
     bool success = ctx_->Calls()->update_rgba_texture(
         name.c_str(), shape[1], shape[0], tensor_view.storage());
     if (!success) {
-      return absl::StrCat("The texture named: '", name,
-                          "' has not been updated");
+      std::string error = "The texture named: '";
+      error += name;
+      error += "' has not been updated";
+      return error;
     }
     return 0;
   }
@@ -285,16 +290,14 @@ class LuaGameModule : public lua::Class<LuaGameModule> {
       size_t size = 0;
       char* buff = nullptr;
       if (!ctx_->FileReaderOverride()(file_name.c_str(), &buff, &size)) {
-        return absl::StrCat("[loadFileToString] Failed to read file! - ",
-                            file_name);
+        return "[loadFileToString] Failed to read file! - " + file_name;
       }
       lua_pushlstring(L, buff, size);
       free(buff);
     } else {
       std::string contents;
       if (!util::GetContents(file_name, &contents)) {
-        return absl::StrCat("[loadFileToString] Failed to read file! - ",
-                            file_name);
+        return "[loadFileToString] Failed to read file! - " + file_name;
       }
       lua::Push(L, contents);
     }

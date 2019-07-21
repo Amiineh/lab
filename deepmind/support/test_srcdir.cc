@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2019 Google Inc.
+// Copyright (C) 2016 Google Inc.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,29 +16,24 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef SUPPRESS_COMMANDLINE_FLAGS
+#include "deepmind/support/commandlineflags.h"
+DECLARE_string(test_srcdir);
+#endif
+
 #include "deepmind/support/test_srcdir.h"
 
 #include <cstdlib>
-#include <string>
-
-#include "absl/strings/str_cat.h"
-
-#ifndef SUPPRESS_COMMANDLINE_FLAGS
-#include "deepmind/support/commandlineflags.h"
-#include "absl/flags/flag.h"
-DECLARE_string(test_srcdir);
-#endif
 
 namespace deepmind {
 namespace lab {
 
 std::string TestSrcDir() {
   if (const char* e = std::getenv("TEST_SRCDIR")) {
-    return absl::StrCat(e, "/org_deepmind_lab");
+    return std::string(e) + "/org_deepmind_lab";
   } else {
 #ifndef SUPPRESS_COMMANDLINE_FLAGS
-    return absl::StrCat(absl::GetFlag(FLAGS_test_srcdir),
-                        "/org_deepmind_lab");
+    return base::GetFlag(FLAGS_test_srcdir) + "/org_deepmind_lab";
 #else
     return "[undefined TEST_SRCDIR environment variable]";
 #endif

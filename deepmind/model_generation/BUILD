@@ -78,6 +78,7 @@ cc_test(
         ":geometry_cylinder",
         ":geometry_sphere",
         ":geometry_util",
+        "//deepmind/support:logging",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -143,6 +144,7 @@ cc_library(
     name = "model_setters",
     srcs = ["model_setters.cc"],
     hdrs = ["model_setters.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":model",
         "//deepmind/include:context_hdrs",
@@ -154,6 +156,7 @@ cc_library(
     name = "model_util",
     srcs = ["model_util.cc"],
     hdrs = ["model_util.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":model",
         "@eigen_archive//:eigen",

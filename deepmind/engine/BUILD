@@ -192,7 +192,6 @@ cc_library(
         "//deepmind/model_generation:lua_model",
         "//deepmind/tensor:lua_tensor",
     ],
-    alwayslink = 1,  # provides symbols for a shared C and C++ header
 )
 
 cc_test(
@@ -202,6 +201,7 @@ cc_test(
     deps = [
         ":callbacks",
         "//deepmind/include:context_hdrs",
+        "//deepmind/support:logging",
         "//deepmind/support:test_srcdir",
         "@com_google_googletest//:gtest_main",
     ],
@@ -250,7 +250,10 @@ cc_library(
     name = "lua_random",
     srcs = ["lua_random.cc"],
     hdrs = ["lua_random.h"],
-    visibility = ["//deepmind/tensor:__pkg__"],
+    visibility = [
+        "//deepmind/include:__pkg__",
+        "//deepmind/tensor:__pkg__",
+    ],
     deps = [
         "//deepmind/lua",
         "//deepmind/lua:class",

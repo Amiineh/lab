@@ -22,7 +22,6 @@ cc_library(
     srcs = ["test_srcdir.cc"],
     hdrs = ["test_srcdir.h"],
     defines = ["SUPPRESS_COMMANDLINE_FLAGS"],
-    deps = ["@com_google_absl//absl/strings"],
 )
 
 cc_binary(

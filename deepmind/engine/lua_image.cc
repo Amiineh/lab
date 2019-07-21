@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2019 Google Inc.
+// Copyright (C) 2017 Google Inc.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -158,15 +158,17 @@ lua::NResultsOr Load(lua_State* L) {
   }
   std::string file_name;
   if (!lua::Read(L, 1, &file_name) || file_name.size() < 4) {
-    return absl::StrCat("[image.load] - \"", lua::ToString(L, 1),
-                        "\" - Invalid name");
+    std::string error = absl::StrCat("[image.load] - \"", lua::ToString(L, 1),
+                                     "\" - Invalid name");
+    return error;
   }
 
   absl::string_view contents;
   std::unique_ptr<char[]> data;
   if (file_name.compare(0, file_name.length() - 4, "content:") == 0) {
     if (!lua::Read(L, 2, &contents)) {
-      return "[image.load] - Missing contents.";
+      std::string error = absl::StrCat("[image.load] - Missing contents.");
+      return error;
     }
   } else {
     util::FileReader reader(fs, file_name.c_str());
@@ -178,21 +180,24 @@ lua::NResultsOr Load(lua_State* L) {
           contents = {data.get(), size};
           return reader.Read(0, size, data.get());
         }()) {
-      return absl::StrCat("[image.load] - \"", file_name,
-                          "\" could not be read.");
+      std::string error =
+          absl::StrCat("[image.load] - \"", file_name, "\" could not be read.");
+      return error;
     }
   }
 
   if (file_name.compare(file_name.length() - 4, 4, ".png") == 0) {
     auto status = LoadPng(L, contents);
     if (!status.ok()) {
-      return absl::StrCat("[image.load] (PNG) - \"", file_name, "\" - ",
-                          status.error());
+      std::string error = absl::StrCat("[image.load] (PNG) - \"", file_name,
+                                       "\" - ", status.error());
+      return error;
     }
     return status;
   }
-  return absl::StrCat("[image.load] - \"", file_name,
-                      "\" - Unsupported file type.");
+  std::string error = absl::StrCat("[image.load] - \"", file_name,
+                                   "\" - Unsupported file type.");
+  return error;
 }
 
 class LinearMagnifier {
@@ -439,18 +444,21 @@ lua::NResultsOr Scale(lua_State* L) {
   if (source == nullptr || !source->tensor_view().IsContiguous() ||
       source->tensor_view().shape().size() != 3 ||
       source->tensor_view().shape()[2] > 4) {
-    return absl::StrCat("[image.scale] - \"", lua::ToString(L, 1),
-                        "\" - Invalid source image");
+    std::string error = absl::StrCat("[image.scale] - \"", lua::ToString(L, 1),
+                                     "\" - Invalid source image");
+    return error;
   }
   std::size_t target_rows;
   if (!lua::Read(L, 2, &target_rows)) {
-    return absl::StrCat("[image.scale] - \"", lua::ToString(L, 2),
-                        "\" - Invalid number of output rows");
+    std::string error = absl::StrCat("[image.scale] - \"", lua::ToString(L, 2),
+                                     "\" - Invalid number of output rows");
+    return error;
   }
   std::size_t target_cols;
   if (!lua::Read(L, 3, &target_cols)) {
-    return absl::StrCat("[image.scale] - \"", lua::ToString(L, 3),
-                        "\" - Invalid number of output columns");
+    std::string error = absl::StrCat("[image.scale] - \"", lua::ToString(L, 3),
+                                     "\" - Invalid number of output columns");
+    return error;
   }
   std::string mode = "bilinear";
   lua::Read(L, 4, &mode);
@@ -475,8 +483,8 @@ lua::NResultsOr Scale(lua_State* L) {
       return 0;
     }
   } else {
-    return absl::StrCat("[image.scale] - \"", lua::ToString(L, 4),
-                        "\" - Unsupported scaling mode");
+    std::string error = absl::StrCat("[image.scale] - \"", lua::ToString(L, 4),
+                                     "\" - Unsupported scaling mode");
   }
 
   // Construct contiguous tensor and return it on the stack.
@@ -594,14 +602,16 @@ lua::NResultsOr SetHue(lua_State* L) {
   // Validate input parameters.
   auto* source = tensor::LuaTensor<unsigned char>::ReadObject(L, 1);
   if (source == nullptr) {
-    return absl::StrCat("[image.setHue] - \"", lua::ToString(L, 1),
-                        "\" - Invalid source image");
+    std::string error = absl::StrCat("[image.setHue] - \"", lua::ToString(L, 1),
+                                     "\" - Invalid source image");
+    return error;
   }
   auto* view = source->mutable_tensor_view();
   if (view->shape().empty() ||
       (view->shape().back() != 3 && view->shape().back() != 4)) {
-    return absl::StrCat(
+    std::string error = absl::StrCat(
         "[image.setHue] - Image shape does not have correct channel count");
+    return error;
   }
   if (!source->tensor_view().IsContiguous()) {
     return "[image.setHue] - Image not contiguous!";
@@ -678,55 +688,62 @@ void ApplyPattern(unsigned char* source_start,
 // Returns the modified source image.
 lua::NResultsOr SetMaskedPattern(lua_State* L) {
   if (lua_gettop(L) != 4) {
-    return absl::StrCat(
+    std::string error = absl::StrCat(
         "[image.setMaskedPattern] - Incorrect number of arguments. Expected: "
         "4, received: ",
         lua_gettop(L));
+    return error;
   }
-
   auto* source = tensor::LuaTensor<unsigned char>::ReadObject(L, 1);
   if (source == nullptr) {
-    return absl::StrCat("[image.setMaskedPattern] - Arg1 \"",
-                        lua::ToString(L, 1), "\" - Invalid source image");
+    std::string error =
+        absl::StrCat("[image.setMaskedPattern] - Arg1 \"", lua::ToString(L, 1),
+                     "\" - Invalid source image");
+    return error;
   }
   const auto* pattern = tensor::LuaTensor<unsigned char>::ReadObject(L, 2);
   if (pattern == nullptr) {
-    return absl::StrCat("[image.setMaskedPattern] - Arg2 \"",
-                        lua::ToString(L, 2), "\" - Invalid pattern image");
+    std::string error =
+        absl::StrCat("[image.setMaskedPattern] - Arg2 \"", lua::ToString(L, 2),
+                     "\" - Invalid pattern image");
+    return error;
   }
-
   std::array<unsigned char, 3> color1;
   std::array<unsigned char, 3> color2;
   if (!IsFound(lua::Read(L, 3, &color1))) {
-    return absl::StrCat("[image.setMaskedPattern] - Arg 3 \"",
-                        lua::ToString(L, 3), "\" - Invalid color1.");
-  }
-  if (!IsFound(lua::Read(L, 4, &color2))) {
-    return absl::StrCat("[image.setMaskedPattern] - Arg 4 \"",
-                        lua::ToString(L, 3), "\" - Invalid color2.");
+    std::string error =
+        absl::StrCat("[image.setMaskedPattern] - Arg 3 \"", lua::ToString(L, 3),
+                     "\" - Invalid color1.");
   }
 
+  if (IsFound(lua::Read(L, 4, &color2))) {
+    std::string error =
+        absl::StrCat("[image.setMaskedPattern] - Arg 4 \"", lua::ToString(L, 3),
+                     "\" - Invalid color1.");
+  }
   auto* source_view = source->mutable_tensor_view();
   const auto& pattern_view = pattern->tensor_view();
 
   if (source_view->shape().size() != pattern_view.shape().size()) {
-    return absl::StrCat(
+    std::string error = absl::StrCat(
         "[image.setMaskedPattern] Arg1 (source) must have the same number of "
         "dimensions as Arg2 (pattern)",
         "Arg 1 (source) shape : [", absl::StrJoin(source_view->shape(), ", "),
         "] Arg 2 (pattern) shape : [",
         absl::StrJoin(pattern_view.shape(), ", "), "]");
+    return error;
   }
 
   // Must have the same major dimensions.
   for (std::size_t i = 0; i + 1 < source_view->shape().size(); ++i) {
     if (source_view->shape()[i] != pattern_view.shape()[i]) {
-      return absl::StrCat(
+      std::string error = absl::StrCat(
           "[image.setMaskedPattern] Arg1 (source) must have the same major "
           "dimensions as Arg2 (pattern).",
           "Arg 1 (source) shape : [", absl::StrJoin(source_view->shape(), ", "),
           "] Arg 2 (pattern) shape : [",
           absl::StrJoin(pattern_view.shape(), ", "), "]");
+      return error;
     }
   }
 

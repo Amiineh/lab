@@ -29,11 +29,6 @@
 
 #include "public/dmlab.h"
 
-enum {
-  MAX_OBSERVATIONS = 1024,
-  MAX_RUNFILES_PATH = 4096
-};
-
 static void __attribute__((noreturn, format(printf, 1, 2)))
 sys_error(const char* fmt, ...) {
   va_list ap;
@@ -61,10 +56,7 @@ static const char kUsage[] =
     "\n"
     "Usage: game --level_script <level>            \\\n"
     "            [--level_setting key=value [...]] \\\n"
-    "            [--observation <S>]               \\\n"
     "            [--num_episodes <N>]              \\\n"
-    "            [--start_index <N>]               \\\n"
-    "            [--print_events]                  \\\n"
     "            [--random_seed <S>]\n"
     "\n"
     "  -l, --level_script:   Mandatory. The level that is to be played. Levels are\n"
@@ -73,8 +65,6 @@ static const char kUsage[] =
     "  -s, --level_setting:  Applies an opaque key-value setting. The setting is\n"
     "                        available to the level script. This flag may be provided\n"
     "                        multiple times.\n"
-    "  -o, --observation:    Print specified observation each frame. This flag\n"
-    "                        may be provided multiple times.\n"
     "  -e, --num_episodes:   The number of episodes to play. Defaults to 1.\n"
     "  -i, --start_index:    Starting episode index. Defaults to 0.\n"
     "  -p, --print_events:   Print events emitted.\n"
@@ -89,9 +79,7 @@ static const char kUsage[] =
 static void process_commandline(int argc, char** argv, EnvCApi* env_c_api,
                                 void* context, int* start_index,
                                 int* num_episodes, int* seed, int* mixer_seed,
-                                bool* log_events, const char** fps,
-                                const char* observation_names[],
-                                int* observation_count) {
+                                bool* log_events, const char** fps) {
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},
       {"level_script", required_argument, NULL, 'l'},
@@ -102,12 +90,11 @@ static void process_commandline(int argc, char** argv, EnvCApi* env_c_api,
       {"mixer_seed", required_argument, NULL, 'm'},
       {"print_events", no_argument, NULL, 'p'},
       {"fps", no_argument, NULL, 'f'},
-      {"observation", required_argument, NULL, 'o'},
       {NULL, 0, NULL, 0}};
 
   char *key, *value;
-  *observation_count = 0;
-  for (int c; (c = getopt_long(argc, argv, "hl:s:i:e:r:m:pf:o:", long_options,
+
+  for (int c; (c = getopt_long(argc, argv, "hl:s:i:e:r:m:pf:", long_options,
                                0)) != -1;) {
     switch (c) {
       case 'h':
@@ -166,74 +153,11 @@ static void process_commandline(int argc, char** argv, EnvCApi* env_c_api,
       case 'p':
         *log_events = true;
         break;
-      case 'o':
-        if (*observation_count >= MAX_OBSERVATIONS) {
-          sys_error("Too many observations specified. Maximum number is %d",
-                    MAX_OBSERVATIONS);
-        }
-        observation_names[(*observation_count)++] = optarg;
-        break;
       case ':':
       case '?':
       default:
         sys_error("Bad command-line flag. Use --help for usage instructions.");
     }
-  }
-}
-
-static void print_observation(const EnvCApi_Observation* obs) {
-  switch (obs->spec.type) {
-    case EnvCApi_ObservationString:
-      printf("\"%.*s\"", obs->spec.shape[0], obs->payload.string);
-      break;
-    case EnvCApi_ObservationDoubles:
-      if (obs->spec.dims == 1) {
-        if (obs->spec.shape[0] == 1) {
-          printf("%f", obs->payload.doubles[0]);
-          break;
-        } else if (obs->spec.shape[0] < 6) {
-          fputs("{", stdout);
-          for (int i = 0; i < obs->spec.shape[0]; ++i) {
-            if (i != 0) fputs(", ", stdout);
-            printf("%f", obs->payload.doubles[i]);
-          }
-          fputs("}", stdout);
-          break;
-        }
-      }
-      fputs("<DoubleTensor ", stdout);
-      for (int i = 0; i < obs->spec.dims; ++i) {
-        if (i != 0) fputs("x", stdout);
-        printf("%d", obs->spec.shape[i]);
-      }
-      fputs(">", stdout);
-      break;
-    case EnvCApi_ObservationBytes:
-      fputs("<ByteTensor ", stdout);
-      for (int i = 0; i < obs->spec.dims; ++i) {
-        if (i != 0) fputs("x", stdout);
-        printf("%d", obs->spec.shape[i]);
-      }
-      fputs(">", stdout);
-      break;
-    default:
-      sys_error("Observation type: %d not supported", obs->spec.type);
-  }
-}
-
-// Prints events to stdout.
-static void print_observation_ids(EnvCApi* env_c_api, void* context,
-                                  const char* observation_names[],
-                                  const int ob_ids[], int ob_count) {
-  for (int ob = 0; ob < ob_count; ++ob) {
-    if (ob_ids[ob] < 0) {
-      continue;
-    }
-    EnvCApi_Observation observation;
-    env_c_api->observation(context, ob_ids[ob], &observation);
-    printf("observation \"%s\" - ", observation_names[ob]);
-    print_observation(&observation);
-    fputs("\n", stdout);
   }
 }
 
@@ -249,7 +173,44 @@ static int print_events(EnvCApi* env_c_api, void* context) {
       if (obs_id != 0) {
         fputs(", ", stdout);
       }
-      print_observation(&event.observations[obs_id]);
+      const EnvCApi_Observation* obs = &event.observations[obs_id];
+      switch (obs->spec.type) {
+        case EnvCApi_ObservationString:
+          printf("\"%.*s\"", obs->spec.shape[0], obs->payload.string);
+          break;
+        case EnvCApi_ObservationDoubles:
+          if (obs->spec.dims == 1) {
+            if (obs->spec.shape[0] == 1) {
+              printf("%f", obs->payload.doubles[0]);
+              break;
+            } else if (obs->spec.shape[0] < 6) {
+              fputs("{", stdout);
+              for (int i = 0; i < obs->spec.shape[0]; ++i) {
+                if (i != 0) fputs(", ", stdout);
+                printf("%f", obs->payload.doubles[i]);
+              }
+              fputs("}", stdout);
+              break;
+            }
+          }
+          fputs("<DoubleTensor ", stdout);
+          for (int i = 0; i < obs->spec.dims; ++i) {
+            if (i != 0) fputs("x", stdout);
+            printf("%d", obs->spec.shape[i]);
+          }
+          fputs(">", stdout);
+          break;
+        case EnvCApi_ObservationBytes:
+          fputs("<ByteTensor ", stdout);
+          for (int i = 0; i < obs->spec.dims; ++i) {
+            if (i != 0) fputs("x", stdout);
+            printf("%d", obs->spec.shape[i]);
+          }
+          fputs(">", stdout);
+          break;
+        default:
+          sys_error("Observation type: %d not supported", obs->spec.type);
+      }
     }
     fputs("\n", stdout);
   }
@@ -260,11 +221,7 @@ int main(int argc, char** argv) {
   static const char kRunfiles[] = ".runfiles/org_deepmind_lab";
   static EnvCApi env_c_api;
   static void* context;
-  static char runfiles_path[MAX_RUNFILES_PATH];
-  static const char* observation_names[MAX_OBSERVATIONS];
-  static int observation_ids[MAX_OBSERVATIONS];
-  static int observation_count = 0;
-
+  static char runfiles_path[4096];
   bool log_events = false;
 
   if (sizeof(runfiles_path) < strlen(argv[0]) + sizeof(kRunfiles)) {
@@ -301,8 +258,7 @@ int main(int argc, char** argv) {
   int mixer_seed = 0;
   const char* fps = NULL;
   process_commandline(argc, argv, &env_c_api, context, &start_index,
-                      &num_episodes, &seed, &mixer_seed, &log_events, &fps,
-                      observation_names, &observation_count);
+                      &num_episodes, &seed, &mixer_seed, &log_events, &fps);
   if (env_c_api.setting(context, "appendCommand", " +set com_maxfps ") != 0) {
     sys_error("Failed to apply 'appendCommand' setting. Internal error: %s",
               env_c_api.error_message(context));
@@ -333,23 +289,6 @@ int main(int argc, char** argv) {
     sys_error("Failed to init RL API: %s", env_c_api.error_message(context));
   }
 
-  int env_observation_count = env_c_api.observation_count(context);
-
-  for (int ob = 0; ob < observation_count; ++ob) {
-    observation_ids[ob] = -1;
-    for (int env_ob = 0; env_ob < env_observation_count; ++env_ob) {
-      if (strcmp(observation_names[ob],
-                 env_c_api.observation_name(context, env_ob)) == 0) {
-        observation_ids[ob] = env_ob;
-        break;
-      }
-    }
-    if (observation_ids[ob] == -1) {
-      sys_error("Requested observation '%s' not found in environment",
-                observation_names[ob]);
-    }
-  }
-
   EnvCApi_EnvironmentStatus status = EnvCApi_EnvironmentStatus_Running;
   for (int i = 0; i < num_episodes && status != EnvCApi_EnvironmentStatus_Error;
        ++i, ++seed) {
@@ -375,14 +314,8 @@ int main(int argc, char** argv) {
       if (event_count != 0 || reward != 0.0) {
         fflush(stdout);
       }
-
-      if (observation_count > 0) {
-        print_observation_ids(&env_c_api, context, observation_names,
-                              observation_ids, observation_count);
-      }
     }
-    if ((log_events && print_events(&env_c_api, context) != 0) ||
-        observation_count > 0) {
+    if (log_events && print_events(&env_c_api, context) != 0) {
       fflush(stdout);
     }
   }

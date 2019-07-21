@@ -34,8 +34,12 @@ namespace deepmind {
 namespace lab {
 namespace {
 
+using abslstring = decltype(absl::StrCat());
+
 // Whether all bits of rhs are set in lhs.
-inline bool DirectionHas(GridMaze::Direction lhs, GridMaze::Direction rhs) {
+inline bool DirectionHas(
+    GridMaze::Direction lhs,
+    GridMaze::Direction rhs) {
   return (static_cast<unsigned char>(lhs) & static_cast<unsigned char>(rhs))
       == static_cast<unsigned char>(rhs);
 }
@@ -334,7 +338,7 @@ class MapSnippetEmitterImpl : public MapSnippetEmitter {
   std::string AddDoor(double i, double j, char direction) const {
     return absl::StrJoin(
         MakeDoor(j, maze_.height() - i - 1, direction, exporter_), "\n\n",
-        [](std::string* out, const map_builder::Entity& ent) {
+        [](abslstring* out, const map_builder::Entity& ent) {
           absl::StrAppend(out, ent.ToString());
         });
   }
@@ -342,7 +346,7 @@ class MapSnippetEmitterImpl : public MapSnippetEmitter {
   std::string AddFenceDoor(double i, double j, char direction) const {
     return absl::StrJoin(
         MakeFenceDoor(j, maze_.height() - i - 1, direction, exporter_), "\n\n",
-        [](std::string* out, const map_builder::Entity& ent) {
+        [](abslstring* out, const map_builder::Entity& ent) {
           absl::StrAppend(out, ent.ToString());
         });
   }

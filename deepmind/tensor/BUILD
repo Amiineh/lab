@@ -38,7 +38,6 @@ cc_library(
         "//deepmind/lua:read",
         "//deepmind/lua:table_ref",
         "//deepmind/util:file_reader",
-        "@com_google_absl//absl/strings",
     ],
 )
 
