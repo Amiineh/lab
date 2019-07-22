@@ -93,7 +93,7 @@ def run(width, height, level_script, frame_count):
 
   config = {'width': str(width), 'height': str(height)}
   observations = ['RGB_INTERLEAVED', 'VEL.TRANS', 'VEL.ROT', 'POS',
-                'DISTANCE_TO_WALL', 'ANGLE_TO_WALL', 'ANGLES']
+                'DISTANCE_TO_WALL', 'ANGLE_TO_WALL', 'ANGLES', 'TIME']
   env = deepmind_lab.Lab(level_script, observations, config=config)
   env.reset()
 
@@ -112,7 +112,9 @@ def run(width, height, level_script, frame_count):
     pos = env.observations()['POS']
     yaw = env.observations()['ANGLES'][1]
     obs = env.observations()['RGB_INTERLEAVED']
+    time = env.observations()['TIME']
 
+    print("\ntime: ", time)
     print("angles: ", env.observations()['ANGLES'])
     print("pos: ", pos)
 

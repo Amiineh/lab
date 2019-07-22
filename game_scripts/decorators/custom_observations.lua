@@ -213,6 +213,10 @@ local function distanceToClosestWall()
   return tensor.DoubleTensor{closest_wall_distance - 16.125}
 end
 
+local function time()
+  return tensor.DoubleTensor{game:episodeTimeSeconds()}
+end
+
 local function normalizedYaw(angle)
   -- Not expecting input angles > 360 or < -360.
   -- Sorry again coding gods
@@ -278,6 +282,7 @@ function custom_observations.decorate(api)
                                 distanceToClosestWall)
     custom_observations.addSpec('ANGLE_TO_WALL', 'Doubles', {1},
                                 angleToClosestWall)
+    custom_observations.addSpec('TIME', 'Doubles', {1}, time)
 
     api.setInstruction('')
     debug_observations.extend(custom_observations)
