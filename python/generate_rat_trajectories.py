@@ -100,12 +100,15 @@ def run(width, height, level_script, frame_count):
   observation_data = []
   position_data = []
   direction_data = []
+  velocity_data = []
+  velocity_angular_data = []
 
 
   for i in range(frame_count):
     dWall = env.observations()['DISTANCE_TO_WALL']
     aWall = env.observations()['ANGLE_TO_WALL']
-    vel = abs(env.observations()['VEL.TRANS'][1])
+    vel = env.observations()['VEL.TRANS']
+    vel_rot = env.observations()['VEL.ROT']
     pos = env.observations()['POS']
     yaw = env.observations()['ANGLES'][1]
     obs = env.observations()['RGB_INTERLEAVED']
@@ -142,12 +145,16 @@ def run(width, height, level_script, frame_count):
     observation_data.append(obs)
     position_data.append(pos)
     direction_data.append(yaw)
+    velocity_data.append(vel)
+    velocity_angular_data.append(vel_rot)
 
     print("action: ", action)
   # print("position_data: ", position_data)
   np.save(save_path + '/obs_data.npy', np.array(observation_data))
   np.save(save_path + '/pos_data.npy', np.array(position_data))
   np.save(save_path + '/dir_data.npy', np.array(direction_data))
+  np.save(save_path + '/vel_data.npy', np.array(velocity_data))
+  np.save(save_path + '/vel_ang_data.npy', np.array(velocity_angular_data))
 
 
 if __name__ == '__main__':
