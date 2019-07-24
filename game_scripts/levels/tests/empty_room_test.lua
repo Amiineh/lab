@@ -24,13 +24,13 @@ local pickups_spawn = require 'dmlab.system.pickups_spawn'
 
 local MAP_ENTITIES = [[
 *********
-*   P   *
-*       *
-*       *
-*   P   *
-*       *
-*       *
-*P      *
+*PPPPPPP*
+*PPPPPPP*
+*PPPPPPP*
+*PPPPPPP*
+*PPPPPPP*
+*PPPPPPP*
+*PPPPPPP*
 *********
 ]]
 
