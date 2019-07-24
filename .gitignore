@@ -4,6 +4,7 @@
 /python/images/*
 /python/images_rat/*
 *.jpeg
+/python/gt
 
 .DS_Store
 .idea
